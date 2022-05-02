@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+
+  dialog_server:
+    build:
+      context: .
+      dockerfile: dialog_server/Dockerfile
+    image: dialog_server_image
+    container_name: dialgo-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../src/:/app/src:Z
+      - ../test:/app/test:Z
+    command:
+      [
+        "bash",
+        "-xc",
+        "cd /app/src/ && python3 run_dialog_server.py"
+      ]
