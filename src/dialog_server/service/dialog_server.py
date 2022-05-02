@@ -6,34 +6,23 @@ from common.constants import DIALOG_SERVER_IP, DIALOG_SERVER_PORT, MAX_WORKER, R
 from grpc_service import dialog_server_pb2, dialog_server_pb2_grpc
 from grpc_service.dialog_server_pb2 import GetReplyHistoryLimitedParam, Reply, ReplyHistoryLimited
 
-demo_reply_histories = [
-    Reply(speaker_id="S1", comment="History1"),
-    Reply(speaker_id="S2", comment="History2"),
-    Reply(speaker_id="S1", comment="History3"),
-    Reply(speaker_id="S2", comment="History4"),
-    Reply(speaker_id="S1", comment="History5"),
-    Reply(speaker_id="S2", comment="History6"),
-    Reply(speaker_id="S1", comment="History7"),
-    Reply(speaker_id="S2", comment="History8"),
-    Reply(speaker_id="S1", comment="History9"),
-    Reply(speaker_id="S2", comment="History10"),
-    Reply(speaker_id="S1", comment="History11"),
-    Reply(speaker_id="S2", comment="History12"),
-    Reply(speaker_id="S1", comment="History13"),
-    Reply(speaker_id="S2", comment="History14"),
-]
+from dialog_server.controller import Controller
 
 
 class DialogServicer(dialog_server_pb2_grpc.DialogServiceServicer):
+    def __init__(self) -> None:
+        self.controller = Controller()
+
     def SendReply(self, request: Reply, context):
         """This function reply responce from dialog bot"""
         logging.debug("called send reply")
 
         speaker_id: str = request.speaker_id
         comment: str = request.comment
-        logging.info(f"{speaker_id} talking '{comment}'")
 
-        return Reply(speaker_id="bot", comment=f"your responce is {comment}")
+        reply = self.controller.get_reply(speaker_id, comment)
+
+        return Reply(speaker_id="bot", comment=reply)
 
     def GetReplyHistoryLimited(self, request: GetReplyHistoryLimitedParam, context):
         """This fuction responce the reply histories"""
@@ -42,25 +31,19 @@ class DialogServicer(dialog_server_pb2_grpc.DialogServiceServicer):
         speaker_id = request.speaker_id
         history_from = request.history_from
 
-        history_end = history_from + REPLY_HISTORY_LIMIT
-        if speaker_id == "S1" and history_end < len(demo_reply_histories):
-            limited_history = demo_reply_histories[history_from:history_end]
-        else:
-            limited_history = []
+        history = self.controller.get_reply_history_limited(speaker_id, history_from)
 
-        return ReplyHistoryLimited(replies=limited_history)
+        return ReplyHistoryLimited(replies=history)
 
     def GetReplyHistory(self, request, context):
         """This function responce the itterable reply history"""
         logging.debug("called get reply history")
         speaker_id = request.speaker_id
 
-        if speaker_id == "S1":
-            for history in demo_reply_histories:
-                yield history
+        histories = self.controller.get_reply_history(speaker_id)
 
-        else:
-            yield Reply()
+        for history in histories:
+            yield history
 
 
 def serve():
