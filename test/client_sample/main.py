@@ -16,6 +16,10 @@ def main():
     comments = client.GetReplyHistoryLimited("S1", history_from=3)
     print(comments)
 
+    # test get all history with stream
+    comments = client.GetReplyHistory("S1")
+    print(comments)
+
 
 if __name__ == "__main__":
     main()

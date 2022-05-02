@@ -4,7 +4,8 @@ import grpc
 from common.constants import DIALOG_SERVER_IP, DIALOG_SERVER_PORT
 from google.protobuf import json_format
 from grpc_service import dialog_server_pb2_grpc
-from grpc_service.dialog_server_pb2 import Empty, GetReplyHistoryLimitedParam, Reply
+from grpc_service.dialog_server_pb2 import (Empty, GetReplyHistoryLimitedParam,
+                                            GetReplyHistoryParam, Reply)
 
 
 class DialogClient:
@@ -33,9 +34,20 @@ class DialogClient:
         histories: List[Reply] = self.stub.GetReplyHistoryLimited(param)
         # convert to list
         histories_dict = json_format.MessageToDict(histories)
-        print(histories_dict)
         comments = []
         for history in histories_dict["replies"]:
             comments.append(history["comment"])
+
+        return comments
+
+    def GetReplyHistory(self, speaker_id) -> List[str]:
+
+        param = GetReplyHistoryParam(speaker_id=speaker_id)
+
+        histories = self.stub.GetReplyHistory(param)
+        comments = []
+
+        for history in histories:
+            comments.append(history.comment)
 
         return comments

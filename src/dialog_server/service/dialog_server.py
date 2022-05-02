@@ -27,15 +27,18 @@ demo_reply_histories = [
 class DialogServicer(dialog_server_pb2_grpc.DialogServiceServicer):
     def SendReply(self, request: Reply, context):
         """This function reply responce from dialog bot"""
+        logging.debug("called send reply")
+
         speaker_id: str = request.speaker_id
         comment: str = request.comment
-
         logging.info(f"{speaker_id} talking '{comment}'")
 
         return Reply(speaker_id="bot", comment=f"your responce is {comment}")
 
     def GetReplyHistoryLimited(self, request: GetReplyHistoryLimitedParam, context):
         """This fuction responce the reply histories"""
+        logging.debug("called get reply history limited")
+
         speaker_id = request.speaker_id
         history_from = request.history_from
 
@@ -48,8 +51,16 @@ class DialogServicer(dialog_server_pb2_grpc.DialogServiceServicer):
         return ReplyHistoryLimited(replies=limited_history)
 
     def GetReplyHistory(self, request, context):
+        """This function responce the itterable reply history"""
+        logging.debug("called get reply history")
+        speaker_id = request.speaker_id
 
-        pass
+        if speaker_id == "S1":
+            for history in demo_reply_histories:
+                yield history
+
+        else:
+            yield Reply()
 
 
 def serve():
