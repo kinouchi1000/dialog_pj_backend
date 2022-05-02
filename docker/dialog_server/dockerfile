@@ -1,4 +1,18 @@
-FROM ubuntu:14.04
-RUN apt-get update
-RUN apt-get install -y curl
+FROM python:3
+USER root
 
+
+RUN apt-get update && \
+    apt-get install -y curl \ 
+    vim
+
+ENV LAN ja_JP.UTF-8
+ENV TZ JST-9
+
+COPY ./dialog_server/requirements.txt /tmp/
+
+RUN pip install --upgrade pip && \
+    pip install --upgrade setuptools && \
+    pip install -r /tmp/requirements.txt
+
+RUN mkdir /app/
