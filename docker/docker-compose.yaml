@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: dialog_server/Dockerfile
     image: dialog_server_image
-    container_name: dialgo-server
+    container_name: dialog-server
     ports:
       - "8080:8080"
     volumes:
@@ -18,4 +18,24 @@ services:
         "bash",
         "-xc",
         "cd /app/src/ && python3 run_dialog_server.py"
+      ]
+
+  inference_server:
+    build:
+      context: .
+      dockerfile: inference_server/Dockerfile
+    image: inference_server_image
+    container_name: inference-server
+    ports:
+      - "8001:8001"
+    volumes:
+      - ../src/:/app/src:Z
+      - ../test:/app/test:Z
+      - inference_server/model:/model
+      - inference_server/data:/data
+    command:
+      [
+        "bash",
+        "-xc",
+        "cd /app/src/ && python3 run_inference_server.py"
       ]

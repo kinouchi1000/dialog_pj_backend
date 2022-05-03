@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# dialog.py logs
+src/log/*
+
+# Model and dict for inference
+
+docker/inference_server/data/*
+docker/inference_server/model/*

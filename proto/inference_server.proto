@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+service InferenceService{
+    rpc GetReply (Comment) returns (Reply);
+}
+
+message Comment{
+    string comment = 1;
+    string comment_past1 = 2;
+    string comment_past2 = 3;
+    string comment_past3 = 4;
+}
+
+message Reply{
+    string reply = 1;
+}
