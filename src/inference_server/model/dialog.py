@@ -12,12 +12,14 @@ import copy
 import difflib
 import logging
 import math
+import os
 import re
 import sys
 import time
 from datetime import datetime
 from logging import (DEBUG, INFO, WARN, FileHandler, Formatter, StreamHandler,
                      basicConfig, getLogger)
+from typing import Dict, List
 
 import numpy as np
 import torch
@@ -33,6 +35,8 @@ from fairseq_cli.interactive import make_batches
 
 # TODO get max_worker from common.constants
 MAX_WORKER = 10
+BOT_NAME="bot"
+
 SEPARATOR = "[SEP]"
 SPK1 = "[SPK1]"
 SPK2 = "[SPK2]"
@@ -132,6 +136,7 @@ class FavotModel(object):
         self.scorer = self.task.build_generator(self.models, _args)
         # Handle tokenization and BPE
         self.tokenizer = encoders.build_tokenizer(args)
+        logging.info(f"sentencepiece_model {args.sentencepiece_model}")
         self.bpe = encoders.build_bpe(args)
 
         # Load alignment dictionary for unknown word replacement
@@ -199,7 +204,7 @@ class Favot(object):
 
     def sent_split(self, line):
         """文章と文に分割"""
-
+        line = "".join(line)
         logging.info(f"sent_split input:{line}")
         _rets = self.sent_splitter.findall(line)
         rets = [r for r in _rets if r != ""]
@@ -300,8 +305,8 @@ class Favot(object):
         return ret
     
     # 実行
-    def execute(self, uttr, mode="normal"):
-        ret = self._execute(uttr, mode=mode)
+    def execute(self, context:List[Dict], mode="normal"):
+        ret = self._execute(context, mode=mode)
         if ret is not None:
             ret_scores, ret_debug = ret
         else:
@@ -312,37 +317,40 @@ class Favot(object):
         print(ret_score, ret_utt)
         if mode == "prefinish":
             ret_utt = ret_utt + "\nあ、すみません。そろそろ時間ですね。今日はありがとうございました。"
-        self.add_contexts(SPK1, ret_utt)
+        context.append({'spk':SPK1,'utt':ret_utt})
+        self.add_contexts(context)
         logging.info(str(ret_scores.most_common(5)))
         return ret_utt, ret_debug
 
     # 実行
-    def _execute(self, uttr, **kwargs):
+    def _execute(self, contexts:List[Dict], **kwargs):
         """対話を実行"""
+        logging.info(contexts)
+        current_uttr = contexts[-1]["utt"]
 
         # 設定コマンド各種
         mode = "normal"
         if "mode" in kwargs:
             mode = kwargs["mode"]
-        if uttr.startswith("/help"):
+        if current_uttr.startswith("/help"):
             logging.info(str(self.args))
             return collections.Counter(), [str(self.args)]
-        if uttr.startswith("/debug"):
-            if uttr == "/debug off" or uttr == "/debug False" or uttr == "/debug false":
+        if current_uttr.startswith("/debug"):
+            if current_uttr == "/debug off" or current_uttr == "/debug False" or current_uttr == "/debug false":
                 self.debug = False
             else:
                 self.debug = True
             return
 
-        if uttr.startswith("/sys "):
-            toks = uttr.split(" ")
+        if current_uttr.startswith("/sys "):
+            toks = current_uttr.split(" ")
             key = toks[1]
             val = toks[2]
             args = {key: val}
             self.set_generator_parameters(args)
             return
 
-        if uttr.startswith("/cancel"):
+        if current_uttr.startswith("/cancel"):
             self.contexts = self.contexts[:-2]
             self.sent_contexts = []
             for cdic in self.contexts:
@@ -353,33 +361,24 @@ class Favot(object):
             return
 
         # 初期対話
-        if uttr == "||init||":
+        if current_uttr == "||init||":
             start_utt = self.args.starting_phrase
-            #start_utt = 'こんにちは。よろしくお願いします。'
-            # logging.info("sys_persona: " + self.make_input_func("", ""))
-            # logging.info("sys_persona: "+self.make_input(""))
-
-            #print("sys: " + start_utt)
-            #start_utt = '何か趣味はありますか？'
-            #self.add_contexts(SPK1, start_utt, mode=mode)
             ret_scores = collections.Counter()
             ret_scores[start_utt] = 0.0
-            #return start_utt, ""
             return ret_scores, ""
 
         ret_debug = []
-        start_time = time.time()
         start_id = 0
 
         inputs = [
-            self.make_input_func(SPK2, uttr, mode=mode),
+            self.make_input_func(contexts),
         ]
-        self.add_contexts(SPK2, uttr, mode=mode)
+        self.add_contexts(contexts)
 
-        if uttr.startswith("/input "):
-            if "終了処理" in uttr:
+        if current_uttr.startswith("/input "):
+            if "終了処理" in current_uttr:
                 mode = "finish"
-            _input = uttr[7:]
+            _input = current_uttr[7:]
             inputs = [
                 _input,
             ]
@@ -638,41 +637,48 @@ class Favot(object):
         ret_flag = ff
         return ret_flag, "".join(new_nodup_cand)
 
-    def add_contexts(self, spk, utt, mode="normal"):
-        self._add_contexts(spk, utt)
+    def add_contexts(self, contexts:List[Dict]):
+        self._add_contexts(contexts)
         return
 
-    def _add_contexts(self, spk, utt):
-        self.contexts.append({"spk": spk, "utt": utt})
-        for s in self.sent_split(utt):
-            self.sent_contexts.append({"spk": spk, "utt": s})
-        return
+    def _add_contexts(self, contexts:List[Dict]):
+        for c in contexts:
+            if c["spk"] == BOT_NAME:
+                c["spk"] = SPK1
+            else: 
+                c["spk"] = SPK2
+            for s in self.sent_split(c["utt"]):
+                self.sent_contexts.append({"spk": c["spk"], "utt": s})
+        self.contexts = contexts
 
-    # 入力生成
-    def make_input(self, newspk, newutt, mode="normal", max_contexts=-1, id=None, idprefix="a"):
-        if max_contexts == -1:
-            max_contexts = self.args.max_contexts
-        line = ""
 
-        contexts = self.contexts
+    def make_input(self,contexts:List[Dict]):
+
         _lines = []
-        lastspk = ""
-        for c in contexts[-self.args.max_contexts:]:
-            spk = c["spk"]
-            lastspk = spk
-            utt = c["utt"]
-            _line = spk + utt + SEPARATOR
-            #lc += len(_line)
-            _lines.append(_line)
-        __line = ""
-        for _line in _lines[::-1]:
-            if len(__line) + len(_line) > 512 - len(newutt):
-                break
-            __line = _line + __line
 
-        line = line + __line
-        line += newspk + newutt + SEPARATOR
+        # 後ろのmax_contexts+1(現在の発話分)だけを取得
+        for c in contexts[-self.args.max_contexts+1:]:
+            spk = c["spk"]
+            utt = "".join(c["utt"])
+
+            if spk == BOT_NAME:
+                spk = SPK1
+            else:
+                spk = SPK2
+            logging.info(f"spk:{spk} utt:{utt}")
+            _line = spk + utt + SEPARATOR
+            _lines.append(_line)
+
+        line = ""
+        # 文字列が512以上なら切り捨て
+        for _line in _lines[::-1]:
+            if len(line) + len(_line) > 512:
+                break
+            line = _line + line
+
         line = line[:-len(SEPARATOR)]
+
+        logging.info(line)
 
         return line
 
@@ -692,15 +698,41 @@ def add_local_args(parser):
 
 # serverから呼び出す用
 class Generator():
-    def __init__(self,data_path, checkpoint_path) -> None:
+    def __init__(self,data_path:str, checkpoint_path:str,sentencepiece_model:str) -> None:
+
+
         # parser
         self.parser = options.get_interactive_generation_parser()
-        self.parser.set_defaults(path=checkpoint_path,num_worker=MAX_WORKER)
-        self.args = options.parse_args_and_arch(self.parser, input_args=[data_path])
+        add_local_args(self.parser)
+        self.parser.set_defaults(
+            path=checkpoint_path, 
+            num_worker=MAX_WORKER,
+            beam=80,
+            min_len=10,
+            source_lang="src",
+            target_lang="dst",
+            tokenizer="space",
+            no_repeat_ngram_size=3,
+            nbest=80,
+            sampling=True,
+            sampling_topp=0.9,
+            temperature=1.0,
+            show_nbest=5
+        )
+        
+        self.args = options.parse_args_and_arch(
+            self.parser,
+            input_args=[
+                data_path,
+                "--bpe","sentencepiece",
+                "--sentencepiece-model",sentencepiece_model,
+            ]
+        )
         utils.import_user_module(self.args)
 
         # inference model
         self.fm = FavotModel(self.args)
+        self.favot = Favot(self.args, self.fm, parser=self.parser)
 
         # logger
         rootname="log/dialog.log"
@@ -712,64 +744,55 @@ class Generator():
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",)
 
 
-    def run(self, context:str):
-        favot = Favot(self.args, self.fm, parser=self.parser)
-        print(favot.execute("||init||"))
-        while True:
-            line = input(">>")
-            if line.startswith("/reset"):
-                favot.reset()
-                continue
-            ret = favot.execute(line.rstrip("\n"))
+    def inference_reply(self, context:List[Dict],)-> str:
+        """ function run dialog system
+        Args:
+            context: list of dict [{"spk":"name","utt":"content"}]
+        """
+        
+        if len(context)<1:
+            return self.favot.execute([{"utt":"||init||","spk":"spker"}])
+        limit = 3
+        while limit>0:
+            ret = self.favot.execute(context)
             if ret is None or len(ret) != 2:
                 continue
             ret, ret_debug = ret
             if ret is not None:
-                self.logger.info("sys_uttr: " + ret)
+                logging.info("sys_uttr: " + ret)
                 print("\n".join(ret_debug))
-                print("sys: " + ret)
+                return ret
+            limit-=1
+
+        return "ごめんなさい。応答に困りました。"
+
+    def cancel(self):
+        self.favot.reset()
 
 
+def _main():
+    generator = Generator(
+        data_path="../../../docker/inference_server/data/sample/bin/",
+        checkpoint_path="../../../docker/inference_server/model/japanese-dialog-transformer-1.6B-persona50k.pt",
+        sentencepiece_model="../../../docker/inference_server/data/dicts/sp_oall_32k.model"
+    )
+    uttr_list=[]
+    ret = generator.inference_reply(uttr_list)
+    uttr_list.append({"spk":SPK1,"utt":ret})
 
-# 以下は試運転用
-def test( parser, args, cfg):
-    #distributed_utils.call_main(args, main)
-    fm = FavotModel(args)
-    favot = Favot(args, fm, parser=parser)
-    print(favot.execute("||init||"))
     while True:
-        line = input(">>")
-        # if line.startswith("/"):
-        if line.startswith("/reset"):
-            favot.reset()
+        uttr = input(">>")
+        uttr = uttr.rstrip('/n')
+        uttr_list.append({"spk":SPK2,"utt":uttr})
+        logging.info(uttr_list)
+
+        if len(uttr)>0:
+            ret = generator.inference_reply(uttr_list)
+            print(f"sys:{ret}")
+            uttr_list.append({"spk":SPK1,"utt":ret})
+        else:
             continue
-        ret = favot.execute(line.rstrip("\n"))
-        if ret is None or len(ret) != 2:
-            continue
-        ret, ret_debug = ret
-        if ret is not None:
-            logging.info("sys_uttr: " + ret)
-            print("\n".join(ret_debug))
-            print("sys: " + ret)
-
-
-def main():
-
-    rootname="log/dialog.log"
-    dt = datetime.now().strftime('%Y%m%d_%H%M%S')
-    fname = rootname + "." + dt
-
-    basicConfig(filename=fname, 
-    level=DEBUG, 
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",)
-
-
-    parser = options.get_interactive_generation_parser()
-    add_local_args(parser)
-    args = options.parse_args_and_arch(parser)
-    cfg = convert_namespace_to_omegaconf(args)
-    test( parser, args, cfg)
 
 
 if __name__ == "__main__":
-    main()
+    _main()

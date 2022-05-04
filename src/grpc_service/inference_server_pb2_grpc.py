@@ -2,6 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+import dialog_server_pb2 as dialog__server__pb2
 import inference_server_pb2 as inference__server__pb2
 
 
@@ -17,7 +18,7 @@ class InferenceServiceStub(object):
         self.GetReply = channel.unary_unary(
                 '/InferenceService/GetReply',
                 request_serializer=inference__server__pb2.Comment.SerializeToString,
-                response_deserializer=inference__server__pb2.Reply.FromString,
+                response_deserializer=dialog__server__pb2.Reply.FromString,
                 )
 
 
@@ -36,7 +37,7 @@ def add_InferenceServiceServicer_to_server(servicer, server):
             'GetReply': grpc.unary_unary_rpc_method_handler(
                     servicer.GetReply,
                     request_deserializer=inference__server__pb2.Comment.FromString,
-                    response_serializer=inference__server__pb2.Reply.SerializeToString,
+                    response_serializer=dialog__server__pb2.Reply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -61,6 +62,6 @@ class InferenceService(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/InferenceService/GetReply',
             inference__server__pb2.Comment.SerializeToString,
-            inference__server__pb2.Reply.FromString,
+            dialog__server__pb2.Reply.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -6,8 +6,8 @@ client = DialogClient()
 
 def main():
     # test reply
-    speaker_id = "speaker1"
-    comment = "hello!!!"
+    speaker_id = "S1"
+    comment = "そうなんですね。"
 
     reply = client.SendReply(speaker_id=speaker_id, comment=comment)
     print(reply)
