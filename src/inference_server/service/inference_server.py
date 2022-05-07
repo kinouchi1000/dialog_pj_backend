@@ -22,7 +22,7 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServiceServicer):
         comment_list = []
         histories_dict = json_format.MessageToDict(request.comments)
 
-        for comment in histories_dict:
+        for comment in histories_dict["comments"]:
             comment_list.append(self.get_dict(comment["speakerId"],comment["comment"]))
 
         comment_list = list(filter(None, comment_list))

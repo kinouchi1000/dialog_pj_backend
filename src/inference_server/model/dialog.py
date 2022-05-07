@@ -7,12 +7,16 @@ python-telegram-bot v13.1
 
 """
 import logging
+import math
 import re
 import sys
 from datetime import datetime
 from logging import DEBUG, basicConfig
 from typing import Dict, List
 
+import fairseq
+import numpy as np
+import torch
 from fairseq import checkpoint_utils, distributed_utils, options, tasks, utils
 
 sys.path.append("src")
@@ -24,7 +28,6 @@ SEPARATOR = "[SEP]"
 SPK1 = "[SPK1]"
 SPK2 = "[SPK2]"
 hiragana = re.compile('[\u3041-\u309F，、．。？！\?\!]+')
-
 
 def add_local_args(parser):
     parser.add_argument('--max-contexts', type=int, default=4, help='max length of used contexts')
