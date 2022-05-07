@@ -135,3 +135,4 @@ src/log/*
 
 docker/inference_server/data/*
 docker/inference_server/model/*
+.vscode

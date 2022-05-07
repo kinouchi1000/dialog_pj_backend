@@ -1,19 +1,22 @@
 import logging
 from typing import Dict, List
 
+from common.constants import DICT_PATH, MODEL_PATH, SENTENCEPIECE_MODEL_PATH
+
 from inference_server.model.dialog import Generator
 
 
 class Controller:
     def __init__(self) -> None:
         self.generator = Generator(
-            data_path="../docker/inference_server/data/sample/bin/",
-            checkpoint_path="../docker/inference_server/model/japanese-dialog-transformer-1.6B-persona50k.pt",
-            sentencepiece_model="../docker/inference_server/data/dicts/sp_oall_32k.model"
+            data_path=DICT_PATH,
+            checkpoint_path=MODEL_PATH,
+            sentencepiece_model=SENTENCEPIECE_MODEL_PATH
         )
 
     def get_reply(self, context: List[Dict]) -> str:
         
+        logging.info(f"context: {context}")
         if len(context)<1:
             return self.generator.favot.execute([{"utt":"||init||","spk":"spker"}])
         limit = 3
@@ -25,5 +28,6 @@ class Controller:
             if ret is not None:
                 return ret
             limit-=1
+        logging.info(f"ret: {ret}")
 
         return "ごめんなさい。応答に困りました。"

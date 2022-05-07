@@ -7,7 +7,7 @@ from grpc_service import dialog_server_pb2_grpc
 from grpc_service.dialog_server_pb2 import (Empty, GetReplyHistoryLimitedParam,
                                             GetReplyHistoryParam, Reply)
 
-
+DIALOG_SERVER_IP="0.0.0.0"
 class DialogClient:
     def __init__(self):
         self.channel = grpc.insecure_channel(f"{DIALOG_SERVER_IP}:{DIALOG_SERVER_PORT}")
@@ -35,6 +35,8 @@ class DialogClient:
         # convert to list
         histories_dict = json_format.MessageToDict(histories)
         comments = []
+        if "replies" in histories_dict:
+            return comments
         for history in histories_dict["replies"]:
             comments.append(history["comment"])
 
@@ -46,7 +48,7 @@ class DialogClient:
 
         histories = self.stub.GetReplyHistory(param)
         comments = []
-
+        
         for history in histories:
             comments.append(history.comment)
 
