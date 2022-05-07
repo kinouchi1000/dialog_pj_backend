@@ -3,7 +3,6 @@
 # source: dialog_server.proto
 """Generated protocol buffer code."""
 from google.protobuf import descriptor as _descriptor
-from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
 from google.protobuf import symbol_database as _symbol_database
@@ -14,15 +13,199 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x64ialog_server.proto\",\n\x05Reply\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\x12\x0f\n\x07\x63omment\x18\x02 \x01(\t\"G\n\x1bGetReplyHistoryLimitedParam\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\x12\x14\n\x0chistory_from\x18\x02 \x01(\x05\"*\n\x14GetReplyHistoryParam\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\".\n\x13ReplyHistoryLimited\x12\x17\n\x07replies\x18\x03 \x03(\x0b\x32\x06.Reply\"\x1c\n\x05\x45mpty\x12\x13\n\x0bstatus_code\x18\x01 \x01(\x05\x32\xae\x01\n\rDialogService\x12\x1b\n\tSendReply\x12\x06.Reply\x1a\x06.Reply\x12L\n\x16GetReplyHistoryLimited\x12\x1c.GetReplyHistoryLimitedParam\x1a\x14.ReplyHistoryLimited\x12\x32\n\x0fGetReplyHistory\x12\x15.GetReplyHistoryParam\x1a\x06.Reply0\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor.FileDescriptor(
+  name='dialog_server.proto',
+  package='',
+  syntax='proto3',
+  serialized_options=None,
+  create_key=_descriptor._internal_create_key,
+  serialized_pb=b'\n\x13\x64ialog_server.proto\",\n\x05Reply\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\x12\x0f\n\x07\x63omment\x18\x02 \x01(\t\"G\n\x1bGetReplyHistoryLimitedParam\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\x12\x14\n\x0chistory_from\x18\x02 \x01(\x05\"*\n\x14GetReplyHistoryParam\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\".\n\x13ReplyHistoryLimited\x12\x17\n\x07replies\x18\x03 \x03(\x0b\x32\x06.Reply\"\x1c\n\x05\x45mpty\x12\x13\n\x0bstatus_code\x18\x01 \x01(\x05\x32\xae\x01\n\rDialogService\x12\x1b\n\tSendReply\x12\x06.Reply\x1a\x06.Reply\x12L\n\x16GetReplyHistoryLimited\x12\x1c.GetReplyHistoryLimitedParam\x1a\x14.ReplyHistoryLimited\x12\x32\n\x0fGetReplyHistory\x12\x15.GetReplyHistoryParam\x1a\x06.Reply0\x01\x62\x06proto3'
+)
 
 
 
-_REPLY = DESCRIPTOR.message_types_by_name['Reply']
-_GETREPLYHISTORYLIMITEDPARAM = DESCRIPTOR.message_types_by_name['GetReplyHistoryLimitedParam']
-_GETREPLYHISTORYPARAM = DESCRIPTOR.message_types_by_name['GetReplyHistoryParam']
-_REPLYHISTORYLIMITED = DESCRIPTOR.message_types_by_name['ReplyHistoryLimited']
-_EMPTY = DESCRIPTOR.message_types_by_name['Empty']
+
+_REPLY = _descriptor.Descriptor(
+  name='Reply',
+  full_name='Reply',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='speaker_id', full_name='Reply.speaker_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='comment', full_name='Reply.comment', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=23,
+  serialized_end=67,
+)
+
+
+_GETREPLYHISTORYLIMITEDPARAM = _descriptor.Descriptor(
+  name='GetReplyHistoryLimitedParam',
+  full_name='GetReplyHistoryLimitedParam',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='speaker_id', full_name='GetReplyHistoryLimitedParam.speaker_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='history_from', full_name='GetReplyHistoryLimitedParam.history_from', index=1,
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=69,
+  serialized_end=140,
+)
+
+
+_GETREPLYHISTORYPARAM = _descriptor.Descriptor(
+  name='GetReplyHistoryParam',
+  full_name='GetReplyHistoryParam',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='speaker_id', full_name='GetReplyHistoryParam.speaker_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=142,
+  serialized_end=184,
+)
+
+
+_REPLYHISTORYLIMITED = _descriptor.Descriptor(
+  name='ReplyHistoryLimited',
+  full_name='ReplyHistoryLimited',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='replies', full_name='ReplyHistoryLimited.replies', index=0,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=186,
+  serialized_end=232,
+)
+
+
+_EMPTY = _descriptor.Descriptor(
+  name='Empty',
+  full_name='Empty',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='status_code', full_name='Empty.status_code', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=234,
+  serialized_end=262,
+)
+
+_REPLYHISTORYLIMITED.fields_by_name['replies'].message_type = _REPLY
+DESCRIPTOR.message_types_by_name['Reply'] = _REPLY
+DESCRIPTOR.message_types_by_name['GetReplyHistoryLimitedParam'] = _GETREPLYHISTORYLIMITEDPARAM
+DESCRIPTOR.message_types_by_name['GetReplyHistoryParam'] = _GETREPLYHISTORYPARAM
+DESCRIPTOR.message_types_by_name['ReplyHistoryLimited'] = _REPLYHISTORYLIMITED
+DESCRIPTOR.message_types_by_name['Empty'] = _EMPTY
+_sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
 Reply = _reflection.GeneratedProtocolMessageType('Reply', (_message.Message,), {
   'DESCRIPTOR' : _REPLY,
   '__module__' : 'dialog_server_pb2'
@@ -58,20 +241,51 @@ Empty = _reflection.GeneratedProtocolMessageType('Empty', (_message.Message,), {
   })
 _sym_db.RegisterMessage(Empty)
 
-_DIALOGSERVICE = DESCRIPTOR.services_by_name['DialogService']
-if _descriptor._USE_C_DESCRIPTORS == False:
 
-  DESCRIPTOR._options = None
-  _REPLY._serialized_start=23
-  _REPLY._serialized_end=67
-  _GETREPLYHISTORYLIMITEDPARAM._serialized_start=69
-  _GETREPLYHISTORYLIMITEDPARAM._serialized_end=140
-  _GETREPLYHISTORYPARAM._serialized_start=142
-  _GETREPLYHISTORYPARAM._serialized_end=184
-  _REPLYHISTORYLIMITED._serialized_start=186
-  _REPLYHISTORYLIMITED._serialized_end=232
-  _EMPTY._serialized_start=234
-  _EMPTY._serialized_end=262
-  _DIALOGSERVICE._serialized_start=265
-  _DIALOGSERVICE._serialized_end=439
+
+_DIALOGSERVICE = _descriptor.ServiceDescriptor(
+  name='DialogService',
+  full_name='DialogService',
+  file=DESCRIPTOR,
+  index=0,
+  serialized_options=None,
+  create_key=_descriptor._internal_create_key,
+  serialized_start=265,
+  serialized_end=439,
+  methods=[
+  _descriptor.MethodDescriptor(
+    name='SendReply',
+    full_name='DialogService.SendReply',
+    index=0,
+    containing_service=None,
+    input_type=_REPLY,
+    output_type=_REPLY,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+  _descriptor.MethodDescriptor(
+    name='GetReplyHistoryLimited',
+    full_name='DialogService.GetReplyHistoryLimited',
+    index=1,
+    containing_service=None,
+    input_type=_GETREPLYHISTORYLIMITEDPARAM,
+    output_type=_REPLYHISTORYLIMITED,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+  _descriptor.MethodDescriptor(
+    name='GetReplyHistory',
+    full_name='DialogService.GetReplyHistory',
+    index=2,
+    containing_service=None,
+    input_type=_GETREPLYHISTORYPARAM,
+    output_type=_REPLY,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+])
+_sym_db.RegisterServiceDescriptor(_DIALOGSERVICE)
+
+DESCRIPTOR.services_by_name['DialogService'] = _DIALOGSERVICE
+
 # @@protoc_insertion_point(module_scope)

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import 'dialog_server.proto';
+
+service InferenceService{
+    rpc GetReply (Comment) returns (Reply);
+}
+
+message Comment{
+    repeated Reply comments = 1;
+}
