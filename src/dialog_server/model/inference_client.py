@@ -19,9 +19,8 @@ class InferenceClient:
         """
         reply = Reply(speaker_id="speaker",comment=comment)
         history.append(reply)
-        comments = Comment(
-            comments = history
-        )
+        comments = Comment(comments = history)
+
         ret = self._stub.GetReply(comments)
 
         return ret.comment

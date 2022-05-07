@@ -20,18 +20,18 @@ class InferenceServicer(inference_server_pb2_grpc.InferenceServiceServicer):
     def GetReply(self, request, con):
 
         comment_list = []
-        histories_dict = json_format.MessageToDict(request)
+        histories_dict = json_format.MessageToDict(request.comments)
 
-        for comment in histories_dict["comments"][::-1]:
+        for comment in histories_dict:
             comment_list.append(self.get_dict(comment["speakerId"],comment["comment"]))
 
         comment_list = list(filter(None, comment_list))
 
-        logging.info(f"comment_list: {comment_list}")
         reply = self.controller.get_reply(comment_list)
         return Reply(comment=reply)
 
-    def get_dict(self,id:str, comment:str):
+    @staticmethod
+    def get_dict(id:str, comment:str):
         if id != None and comment !=None and id != "" and comment != "":
             return {'spk':id, 'utt':comment}
         else:

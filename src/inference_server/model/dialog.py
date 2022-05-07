@@ -12,15 +12,14 @@ import copy
 import difflib
 import logging
 import math
-import os
 import re
 import sys
 import time
 from datetime import datetime
-from logging import (DEBUG, INFO, WARN, FileHandler, Formatter, StreamHandler,
-                     basicConfig, getLogger)
+from logging import DEBUG, basicConfig
 from typing import Dict, List
 
+import fairseq
 import numpy as np
 import torch
 from fairseq import checkpoint_utils, distributed_utils, options, tasks, utils
@@ -33,9 +32,8 @@ from fairseq_cli.generate import get_symbols_to_strip_from_output
 #from fairseq_cli import interactive as intr
 from fairseq_cli.interactive import make_batches
 
-# TODO get max_worker from common.constants
-MAX_WORKER = 10
-BOT_NAME="bot"
+sys.path.append("src")
+from common.constants import BOT_NAME, MAX_WORKER
 
 SEPARATOR = "[SEP]"
 SPK1 = "[SPK1]"
@@ -48,37 +46,29 @@ class FavotModel(object):
 
     def __init__(self, args):
         self.args = args
-        self.cfg = None
-        #if not legacymode:
         self.cfg = convert_namespace_to_omegaconf(args)
-        cfg = self.cfg
-        #self.cfg.generation.constraints = args.constraints
 
         if hasattr(self.args, "remove_bpe"):
             self.args.post_process = self.args.remove_bpe
         else:
             self.args.remove_bpe = self.args.post_process
-        self.contexts = []
-        start_time = time.time()
-        self.total_translate_time = 0
+            
         utils.import_user_module(args)
 
         if args.buffer_size < 1:
             args.buffer_size = 1
-        #if args.max_tokens is None and args.max_sentences is None:
         if args.max_tokens is None and args.batch_size is None:
             args.max_sentences = 1
             args.batch_size = 1
 
         assert not args.sampling or args.nbest == args.beam, \
             '--sampling requires --nbest to be equal to --beam'
-        #assert not args.max_sentences or args.max_sentences <= args.buffer_size, \
-        #    '--max-sentences/--batch-size cannot be larger than --buffer-size'
+
         print(args.batch_size, args.buffer_size, args.batch_size <= args.buffer_size)
         assert not args.batch_size or args.batch_size <= args.buffer_size, \
             '--max-sentences/--batch-size cannot be larger than --buffer-size'
 
-        logging.info(cfg)
+        logging.info(self.cfg)
 
         # Fix seed for stochastic decoding
         if args.seed is not None and not args.no_seed_provided:
@@ -88,31 +78,21 @@ class FavotModel(object):
         self.use_cuda = torch.cuda.is_available() and not args.cpu
 
         # Setup task, e.g., translation
-        #if legacymode:
         self.task = tasks.setup_task(args)
-        #else:
-        #    self.task = tasks.setup_task(self.cfg)
 
         # Load ensemble
         logging.info('loading model(s) from {}'.format(args.path))
 
-        #return
-        overrides = ast.literal_eval(cfg.common_eval.model_overrides)
-        logging.info("loading model(s) from {}".format(cfg.common_eval.path))
+        overrides = ast.literal_eval(self.cfg.common_eval.model_overrides)
+        logging.info("loading model(s) from {}".format(self.cfg.common_eval.path))
         self.models, self._model_args = checkpoint_utils.load_model_ensemble(
-            utils.split_paths(cfg.common_eval.path),
+            utils.split_paths(self.cfg.common_eval.path),
             arg_overrides=overrides,
             task=self.task,
-            suffix=cfg.checkpoint.checkpoint_suffix,
-            strict=(cfg.checkpoint.checkpoint_shard_count == 1),
-            num_shards=cfg.checkpoint.checkpoint_shard_count,
+            suffix=self.cfg.checkpoint.checkpoint_suffix,
+            strict=(self.cfg.checkpoint.checkpoint_shard_count == 1),
+            num_shards=self.cfg.checkpoint.checkpoint_shard_count,
         )
-        # self.models, self._model_args = checkpoint_utils.load_model_ensemble(
-        #     args.path.split(os.pathsep),
-        #     arg_overrides=eval(args.model_overrides),
-        #     task=self.task,
-        #     suffix=getattr(args, "checkpoint_suffix", ""),
-        # )
 
         # Set dictionaries
         self.src_dict = self.task.source_dictionary
@@ -120,9 +100,7 @@ class FavotModel(object):
 
         # Optimize ensemble for generation
         for model in self.models:
-            #if legacymode:
-            #    model.prepare_for_inference_(args)
-            #else:
+
             model.prepare_for_inference_(self.cfg)
             if args.fp16:
                 model.half()
@@ -152,15 +130,7 @@ class FavotModel(object):
         if self.cfg.interactive.buffer_size > 1:
             logging.info("Sentence buffer size: %s", self.cfg.interactive.buffer_size)
 
-        # if args.constraints:
-        #     logging.warning("NOTE: Constrained decoding currently assumes a shared subword vocabulary.")
-
-        # if args.buffer_size > 1:
-        #     logging.info('Sentence buffer size: %s', args.buffer_size)
-        #logging.info('NOTE: hypothesis and token scores are output in base 2')
-        #logging.info('Type the input sentence and press return:')
         logging.info("loading done")
-        #print("loading done")
 
 
 class Favot(object):
@@ -186,8 +156,7 @@ class Favot(object):
         self.cfg = convert_namespace_to_omegaconf(args)
         # TODO この２つをDBから取得
         self.contexts = [] # 対話文　
-        self.sent_contexts = [] # 送られた文章
-        self.total_translate_time = 0
+        self.sent_contexts = [] 
         self.debug = False
         self.delimiter = "．。 　?？!！♪☆★"
         self.sent_splitter = re.compile(".*?[{}]".format(self.delimiter), re.DOTALL)
@@ -204,17 +173,15 @@ class Favot(object):
 
     def sent_split(self, line):
         """文章と文に分割"""
-        line = "".join(line)
-        logging.info(f"sent_split input:{line}")
         _rets = self.sent_splitter.findall(line)
         rets = [r for r in _rets if r != ""]
         if "".join(rets) != line:
             c = re.sub(re.escape("".join(rets)), "", line)
-            #c = c.strip(" \n\t")
+
             if c != "":
                 rets.append(c)
         rets = [r.strip(" \n\t") for r in rets]
-        logging.info(f"sent_split output:{rets}")
+
         return rets
 
     def common_word(self, word)->bool:
@@ -251,7 +218,6 @@ class Favot(object):
 
     def set_generator_parameters(self, args):
         for k, v in args.items():
-            #_args = self.parser.parse_args(["--"+k, v])
             cur_v = self.args.__dict__[k]
             if v == "None":
                 self.args.__setattr__(k, None)
@@ -268,7 +234,6 @@ class Favot(object):
                 self.args.__setattr__(k, str(v))
             else:
                 raise TypeError("Unknown type of generator parameter")
-            #self.args.__setattr__(k, _args.__dict__[k])
             print(self.args)
         self.fm.generator = self.fm.task.build_generator(self.fm.models, self.args)
         _args = copy.deepcopy(self.args)
@@ -306,6 +271,7 @@ class Favot(object):
     
     # 実行
     def execute(self, context:List[Dict], mode="normal"):
+        logging.info(f"execute input : {context}")
         ret = self._execute(context, mode=mode)
         if ret is not None:
             ret_scores, ret_debug = ret
@@ -318,14 +284,13 @@ class Favot(object):
         if mode == "prefinish":
             ret_utt = ret_utt + "\nあ、すみません。そろそろ時間ですね。今日はありがとうございました。"
         context.append({'spk':SPK1,'utt':ret_utt})
-        self.add_contexts(context)
         logging.info(str(ret_scores.most_common(5)))
+        self.reset()
         return ret_utt, ret_debug
 
     # 実行
     def _execute(self, contexts:List[Dict], **kwargs):
         """対話を実行"""
-        logging.info(contexts)
         current_uttr = contexts[-1]["utt"]
 
         # 設定コマンド各種
@@ -350,15 +315,6 @@ class Favot(object):
             self.set_generator_parameters(args)
             return
 
-        if current_uttr.startswith("/cancel"):
-            self.contexts = self.contexts[:-2]
-            self.sent_contexts = []
-            for cdic in self.contexts:
-                c = cdic["utt"]
-                #for s in self.sent_splitter.findall(c):
-                for s in self.sent_split(c):
-                    self.sent_contexts.append({"spk": cdic["spk"], "utt": s})
-            return
 
         # 初期対話
         if current_uttr == "||init||":
@@ -375,25 +331,25 @@ class Favot(object):
         ]
         self.add_contexts(contexts)
 
-        if current_uttr.startswith("/input "):
-            if "終了処理" in current_uttr:
-                mode = "finish"
-            _input = current_uttr[7:]
-            inputs = [
-                _input,
-            ]
-        #_input.replace("ID01","ID47"),
+        # if current_uttr.startswith("/input "):
+        #     if "終了処理" in current_uttr:
+        #         mode = "finish"
+        #     _input = current_uttr[7:]
+        #     inputs = [
+        #         _input,
+        #     ]
 
         logging.info("input_seq: " + str(inputs))
         if self.debug:
             ret_debug.append("input_seq: " + str(inputs))
         results = []
 
+        
         args = self.fm.cfg
         task = self.fm.task
         max_positions = self.fm.max_positions
         use_cuda = self.fm.use_cuda
-
+        # inference
         for i, batch in enumerate(make_batches(inputs, args, task, max_positions, self.encode_fn)):
             bsz = batch.src_tokens.size(0)
             src_tokens = batch.src_tokens
@@ -411,12 +367,10 @@ class Favot(object):
                     'src_lengths': src_lengths,
                     'prev_output_tokens': src_tokens
                 },
-                #"target": zero_samples[i]["net_input"]["src_tokens"],
             }
             translate_start_time = time.time()
             translations = task.inference_step(self.fm.generator, self.fm.models, sample, constraints=constraints)
             translate_time = time.time() - translate_start_time
-            self.fm.total_translate_time += translate_time
             list_constraints = [[] for _ in range(bsz)]
 
             if args.generation.constraints:
@@ -429,13 +383,13 @@ class Favot(object):
                     "time": translate_time / len(translations)
                 }))
 
-        ret_cands = []
         ret_scores = collections.Counter()
+
+
         # sort output to match input order
         for id_, src_tokens, hypos, info in sorted(results, key=lambda x: x[0]):
             if self.fm.src_dict is not None:
                 src_str = self.fm.src_dict.string(src_tokens, args.common_eval.post_process)
-                #src_str = self.fm.src_dict.string(src_tokens, args.post_process)
                 print("W-{}\t{:.3f}\tseconds".format(id_, info["time"]))
                 for constraint in info["constraints"]:
                     print("C-{}\t{}".format(id_, self.fm.tgt_dict.string(constraint, args.common_eval.post_process)))
@@ -456,13 +410,11 @@ class Favot(object):
                     extra_symbols_to_ignore=get_symbols_to_strip_from_output(self.fm.generator),
                 )
                 detok_hypo_str = self.decode_fn(hypo_str)
-                _cand = detok_hypo_str
 
                 score = hypo['score'] / math.log(2)  # convert to base 2
 
                 # remove duplicate candidates
-                dup_flag, nodup_cand = self.contain_duplicate(detok_hypo_str, mode=mode, id=id_)
-                #ret_scores[detok_hypo_str] = score - 10000
+                dup_flag, nodup_cand = self.contain_duplicate(detok_hypo_str, self.contexts)
                 if dup_flag and self.args.suppress_duplicate:
                     logging.info("duplicated pattern: {}".format(detok_hypo_str))
                     if nodup_cand != "":
@@ -474,8 +426,6 @@ class Favot(object):
                 logging.info("system_utt_cands: " + 'H-{}\t{}\t{}'.format(id_, score, hypo_str))
                 logging.info("system_utt_cands: " + 'D-{}\t{}\t{}'.format(id_, score, detok_hypo_str))
                 if self.debug:
-                    #ll='H-{}\t{}\t{}'.format(id_, score, hypo_str)+"\n"+'D-{}\t{}\t{}'.format(id_, score, detok_hypo_str)
-                    #ret_debug.append(ll)
                     ret_debug.append("system_utt_cands: " + 'D-{}\t{}\t{}'.format(id_, score, detok_hypo_str))
 
                 _scores = hypo['positional_scores'].div_(math.log(2)).tolist()
@@ -518,24 +468,8 @@ class Favot(object):
                         score -= 2
                         if "そろそろ" in detok_hypo_str:
                             score -= 1000000
-                # if self.args.rep_pen != 0:
-                #     repeat_num = self.num_repeat_topic_word(detok_hypo_str, mode=mode, contexts=_contexts)
-                #     score -= repeat_num * self.args.rep_pen
-                # #suspect, contained = self.cooccur_check(detok_hypo_str)
-                # if self.args.sus_pen != 0 or self.args.check_reward != 0:
-                #     suspect_num, checked_num = self.cooccur_check(detok_hypo_str, mode=mode, contexts=_contexts)
-                #     score += min(checked_num, 2) * self.args.check_reward  # 0.5?
-                #     score -= suspect_num * self.args.sus_pen
-                # #suspect_num = len(suspect)
-                # #contained_num = len(contained)
-                # #score -= sum([detok.hypo_str.count(c) - 1 for c in contained])
-                # score -= detok_hypo_str.count("、") * self.args.toks_pen
                 nodup_cand = nodup_cand.replace("(笑)", " ").replace("(笑）", " ").replace("（笑)", " ")
 
-                # if self.args.nodup:
-                #     ret_scores[nodup_cand] = score
-                # else:
-                #     #_cand_counter[detok_hypo_str] = score
                 ret_scores[detok_hypo_str] = score
 
                 logging.info("system_utt_cands: " + 'P-{}\t{}'.format(
@@ -554,26 +488,22 @@ class Favot(object):
         return ret_scores, ret_debug
 
     # 重複を含む
-    def contain_duplicate(self, hypo, mode="normal", id=-1):
-        """複製を含む"""
-        #sents = self.sent_splitter.findall(hypo)
+    def contain_duplicate(self, hypo,context):
         sents = self.sent_split(hypo)
         nodup_cand = []
         ff = False
-        sent_contexts = self.sent_contexts
-        contexts = self.contexts
+        
         for orgs in sents:
             f = False
             s = orgs.rstrip("!?！？。．　・")
             spk2_skip = 0
-            for i, cdic in enumerate(sent_contexts[::-1]):
+            for i, cdic in enumerate(self.sent_contexts[::-1]):
                 if cdic["spk"] == SPK2 and spk2_skip < 2:
                     continue
                 elif cdic["spk"] == SPK1:
                     spk2_skip += 1
 
                 c = cdic["utt"].rstrip("!?！？。．　・")
-                ## remove too short sentences with no hiragana
                 hiras = hiragana.findall(s)
                 hira = "".join(hiras)
                 if len(hira) >= len(c) - 1 and (len(c) < 7 or len(s) < 7):
@@ -592,11 +522,10 @@ class Favot(object):
 
         ## 文全体チェック: nodup_candでかけるように変更
         f = False
-        for cdic in contexts:
+        for cdic in context:
             if cdic["spk"] == SPK2:
                 continue
             c = cdic["utt"]
-            #e = difflib.SequenceMatcher(None, hypo, c).ratio()
             e = difflib.SequenceMatcher(None, "".join(nodup_cand), c).ratio()
             if e > 0.5:
                 logging.info("all sim: {}, cand: {}, contexts: {}".format(e, hypo, c))
@@ -607,11 +536,10 @@ class Favot(object):
 
         ## check duplicate tokens within the sentence itself
         _contexts = []
-        #for i, s in enumerate(sents):
+
         for i, s in enumerate(nodup_cand):
             _contexts.append({"spk": SPK1, "utt": s, "id": i})
 
-        #for i, s in enumerate(sents):
         new_nodup_cand = []
         for i, s in enumerate(nodup_cand):
             f = False
@@ -647,6 +575,7 @@ class Favot(object):
                 c["spk"] = SPK1
             else: 
                 c["spk"] = SPK2
+            
             for s in self.sent_split(c["utt"]):
                 self.sent_contexts.append({"spk": c["spk"], "utt": s})
         self.contexts = contexts
@@ -751,13 +680,12 @@ class Generator():
         """
         
         if len(context)<1:
-            return self.favot.execute([{"utt":"||init||","spk":"spker"}])
+            ret, ret_debug = self.favot.execute([{"utt":"||init||","spk":"spker"}])
+            return ret
         limit = 3
         while limit>0:
-            ret = self.favot.execute(context)
-            if ret is None or len(ret) != 2:
-                continue
-            ret, ret_debug = ret
+            ret, ret_debug = self.favot.execute(context)
+
             if ret is not None:
                 logging.info("sys_uttr: " + ret)
                 print("\n".join(ret_debug))
@@ -770,11 +698,14 @@ class Generator():
         self.favot.reset()
 
 
+
+
+#### test 用スクリプト###########
 def _main():
     generator = Generator(
-        data_path="../../../docker/inference_server/data/sample/bin/",
-        checkpoint_path="../../../docker/inference_server/model/japanese-dialog-transformer-1.6B-persona50k.pt",
-        sentencepiece_model="../../../docker/inference_server/data/dicts/sp_oall_32k.model"
+        data_path="docker/inference_server/data/sample/bin/",
+        checkpoint_path="docker/inference_server/model/japanese-dialog-transformer-1.6B-persona50k.pt",
+        sentencepiece_model="docker/inference_server/data/dicts/sp_oall_32k.model"
     )
     uttr_list=[]
     ret = generator.inference_reply(uttr_list)
@@ -786,12 +717,9 @@ def _main():
         uttr_list.append({"spk":SPK2,"utt":uttr})
         logging.info(uttr_list)
 
-        if len(uttr)>0:
-            ret = generator.inference_reply(uttr_list)
-            print(f"sys:{ret}")
-            uttr_list.append({"spk":SPK1,"utt":ret})
-        else:
-            continue
+        ret = generator.inference_reply(uttr_list)
+        print(f"sys:{ret}")
+        uttr_list.append({"spk":SPK1,"utt":ret})
 
 
 if __name__ == "__main__":
