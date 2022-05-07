@@ -22,7 +22,6 @@ class DialogRepository:
 
         # TODO get from Redis
         if speaker_id == "S1":
-            logging.info(f"from: {history_from} end: {history_end}")
             return self.demo_reply_histories[history_from:history_end]
         else:
             logging.info("speaker doesn't exist")

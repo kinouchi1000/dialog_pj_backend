@@ -26,11 +26,9 @@ class Controller:
     def get_reply_history_limited(self, speaker_id: str, history_from: int) -> List[Reply]:
 
         history: List[Reply] = self.repository.get_history(speaker_id, history_from)
-        logging.info(f"limit history: {history}")
 
         return history
 
     def get_reply_history(self, speaker_id) -> List[Reply]:
         history: List[Reply] = self.repository.get_history_all(speaker_id)
-        logging.info(f"limit history: {history}")
         return history
