@@ -16,14 +16,16 @@ class Controller:
     def get_reply(self, speaker_id: str, comment: str) -> str:
 
         # get Infenrece (responce)
-        history = self.repository.get_history(speaker_id=speaker_id,history_from=-4)
+        history = self.repository.get_history(speaker_id=speaker_id, history_from=-4)
         reply = self.inference_client.get_reply(comment, history)
 
         # store data
         self.repository.store_dialog(speaker_id, comment=comment, reply=reply)
         return reply
 
-    def get_reply_history_limited(self, speaker_id: str, history_from: int) -> List[Reply]:
+    def get_reply_history_limited(
+        self, speaker_id: str, history_from: int
+    ) -> List[Reply]:
 
         history: List[Reply] = self.repository.get_history(speaker_id, history_from)
 
