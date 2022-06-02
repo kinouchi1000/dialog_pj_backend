@@ -4,13 +4,22 @@ import grpc
 from common.constants import DIALOG_SERVER_IP, DIALOG_SERVER_PORT
 from google.protobuf import json_format
 from grpc_service import dialog_server_pb2_grpc
-from grpc_service.dialog_server_pb2 import (Empty, GetReplyHistoryLimitedParam,
-                                            GetReplyHistoryParam, Reply)
+from grpc_service.dialog_server_pb2 import (
+    Empty,
+    GetReplyHistoryLimitedParam,
+    GetReplyHistoryParam,
+    Reply,
+)
 
-DIALOG_SERVER_IP="0.0.0.0"
+DIALOG_SERVER_IP = "0.0.0.0"
+
+
 class DialogClient:
     def __init__(self):
-        self.channel = grpc.insecure_channel(f"{DIALOG_SERVER_IP}:{DIALOG_SERVER_PORT}")
+        self.channel = grpc.insecure_channel(
+            f"{DIALOG_SERVER_IP}:{DIALOG_SERVER_PORT}",
+            options=(("grpc.enable_http_proxy", 0),),
+        )
         self.stub = dialog_server_pb2_grpc.DialogServiceStub(self.channel)
 
     def __del__(self):
@@ -28,7 +37,9 @@ class DialogClient:
     def GetReplyHistoryLimited(self, speaker_id: str, history_from: int) -> List[str]:
 
         # generate parameter
-        param = GetReplyHistoryLimitedParam(speaker_id=speaker_id, history_from=history_from)
+        param = GetReplyHistoryLimitedParam(
+            speaker_id=speaker_id, history_from=history_from
+        )
 
         # get histories
         histories: List[Reply] = self.stub.GetReplyHistoryLimited(param)
@@ -48,7 +59,7 @@ class DialogClient:
 
         histories = self.stub.GetReplyHistory(param)
         comments = []
-        
+
         for history in histories:
             comments.append(history.comment)
 
