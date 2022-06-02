@@ -18,9 +18,9 @@ ENV TZ JST-9
 
 COPY ./inference_server/requirements.txt /tmp/
 
-RUN pip install --upgrade pip && \
-    pip install --upgrade setuptools && \
-    pip install -r /tmp/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install --upgrade setuptools
+RUN pip install -r /tmp/requirements.txt
 
 # 現状はCPU版
 RUN pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
